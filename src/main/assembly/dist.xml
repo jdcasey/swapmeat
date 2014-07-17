@@ -1,0 +1,44 @@
+<assembly>
+  <id>dist</id>
+  <formats>
+    <format>zip</format>
+    <format>tar.gz</format>
+  </formats>
+  
+  <includeBaseDirectory>true</includeBaseDirectory>
+  <baseDirectory>swapmeat</baseDirectory>
+  
+  <dependencySets>
+    <!-- this main project artifact -->
+    <dependencySet>
+      <useProjectArtifact>true</useProjectArtifact>
+      <useProjectAttachments>false</useProjectAttachments>
+      <includes>
+        <include>${project.groupId}:${project.artifactId}:jar:${project.version}</include>
+      </includes>
+      <outputDirectory>lib</outputDirectory>
+      <outputFileNameMapping>${project.artifactId}.jar</outputFileNameMapping>
+    </dependencySet>
+    <!-- other runtime dependencies -->
+    <dependencySet>
+      <useProjectArtifact>false</useProjectArtifact>
+      <scope>runtime</scope>
+      <outputDirectory>lib/thirdparty</outputDirectory>
+    </dependencySet>
+  </dependencySets>
+  
+  <fileSets>
+    <fileSet>
+      <directory>src/main/bin</directory>
+      <outputDirectory>bin</outputDirectory>
+      <directoryMode>755</directoryMode>
+      <fileMode>755</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>src/main/etc</directory>
+      <outputDirectory>etc</outputDirectory>
+      <directoryMode>755</directoryMode>
+      <fileMode>644</fileMode>
+    </fileSet>
+  </fileSets>
+</assembly>
