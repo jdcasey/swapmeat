@@ -25,7 +25,9 @@ public class BootOptions
 
     public static final String CONTEXT_PATH_PROP = "context-path";
 
-    public static final String DATA_DIR_PROP = "data-dir";
+    public static final String GROUP_BASEDIR_PROP = "group-dir";
+
+    public static final String USER_BASEDIR_PROP = "user-dir";
 
     public static final String DEFAULT_BIND = "0.0.0.0";
 
@@ -57,8 +59,13 @@ public class BootOptions
 
     private final String appHome;
 
-    @Option( name = "-d", aliases = { "--data" }, usage = "Directory where files should be stored (default: ${app.home}/data)" )
-    private String dataDir;
+    private String groupFileDir;
+
+    private final String groupMessageDir;
+
+    private String userFileDir;
+
+    private String userMessageDir;
 
     public BootOptions( final File bootDefaults, final String aproxHome )
         throws IOException, InterpolationException
@@ -104,14 +111,36 @@ public class BootOptions
             config = resolve( bootProps.getProperty( CONFIG_PROP, defaultConfigPath ) );
         }
 
-        if ( dataDir == null )
-        {
-            final String defDataDir = Paths.get( aproxHome, "data" )
-                                           .toString();
-            dataDir = resolve( bootProps.getProperty( DATA_DIR_PROP, defDataDir ) );
-        }
+        final String groupBasedir = bootProps.getProperty( GROUP_BASEDIR_PROP );
+        final String userBasedir = bootProps.getProperty( USER_BASEDIR_PROP );
+
+        groupFileDir = resolveDataDir( groupBasedir, "files", aproxHome, "data/groups/files" );
+        groupMessageDir = resolveDataDir( groupBasedir, "notices", aproxHome, "data/groups/notices" );
+        groupFileDir = resolveDataDir( userBasedir, "files", aproxHome, "data/users/files" );
+        groupFileDir = resolveDataDir( userBasedir, "messages", aproxHome, "data/users/messages" );
 
         contextPath = bootProps.getProperty( CONTEXT_PATH_PROP, contextPath );
+    }
+
+    private String resolveDataDir( final String dataBasedir, final String dataSubdir,
+                                   final String aproxHome, final String defaultAproxHomeSubdir )
+        throws InterpolationException
+    {
+        String value = null;
+        if ( value == null && dataBasedir != null )
+        {
+            value = Paths.get( dataBasedir, dataSubdir )
+                         .toString();
+        }
+
+        if ( value == null )
+        {
+            value = Paths.get( aproxHome, defaultAproxHomeSubdir )
+                         .toString();
+
+        }
+
+        return resolve( value );
     }
 
     public String resolve( final String value )
@@ -221,19 +250,12 @@ public class BootOptions
         this.contextPath = contextPath;
     }
 
-    public void setDataDir( final String dataDir )
-    {
-        this.dataDir = dataDir;
-    }
-
-    public String getDataDir()
-    {
-        return dataDir;
-    }
-
     public void initConfig( final AppConfiguration config )
     {
-        config.setDataDir( getDataDir() );
+        config.setFileStorageDir( AppConfiguration.GroupingType.group, groupFileDir );
+        config.setNoticeStorageDir( AppConfiguration.GroupingType.group, groupMessageDir );
+        config.setFileStorageDir( AppConfiguration.GroupingType.user, userFileDir );
+        config.setNoticeStorageDir( AppConfiguration.GroupingType.user, userMessageDir );
     }
 
 }

@@ -1,21 +1,41 @@
 package org.commonjava.swapmeat.config;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import javax.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
 public class AppConfiguration
 {
 
-    private String dataDir;
-
-    public String getDataDir()
+    public enum GroupingType
     {
-        return dataDir;
+        group, user;
     }
 
-    public void setDataDir( final String dataDir )
+    private final Map<GroupingType, String> fileStorageDirs = new HashMap<>();
+
+    private final Map<GroupingType, String> noticeStorageDirs = new HashMap<>();
+
+    public String getFileStorageDir( final GroupingType type )
     {
-        this.dataDir = dataDir;
+        return fileStorageDirs.get( type );
+    }
+
+    public void setFileStorageDir( final GroupingType type, final String dataDir )
+    {
+        this.fileStorageDirs.put( type, dataDir );
+    }
+
+    public String getNoticeStorageDir( final GroupingType type )
+    {
+        return noticeStorageDirs.get( type );
+    }
+
+    public void setNoticeStorageDir( final GroupingType type, final String dataDir )
+    {
+        this.noticeStorageDirs.put( type, dataDir );
     }
 
 }
