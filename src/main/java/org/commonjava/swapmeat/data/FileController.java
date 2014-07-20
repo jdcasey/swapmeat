@@ -1,4 +1,4 @@
-package org.commonjava.swapmeat.rest;
+package org.commonjava.swapmeat.data;
 
 import static org.apache.commons.io.IOUtils.closeQuietly;
 import static org.apache.commons.io.IOUtils.copy;
@@ -15,13 +15,11 @@ import java.util.Date;
 import java.util.Map;
 
 import javax.activation.MimetypesFileTypeMap;
+import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import org.commonjava.swapmeat.config.AppConfiguration;
-import org.commonjava.vertx.vabr.anno.Route;
-import org.commonjava.vertx.vabr.helper.RequestHandler;
-import org.commonjava.vertx.vabr.types.BindingType;
-import org.commonjava.vertx.vabr.types.Method;
+import org.commonjava.swapmeat.config.AppConfiguration.GroupingType;
 import org.commonjava.vertx.vabr.util.VertXInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,9 +29,8 @@ import org.vertx.java.core.http.HttpServerResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-//TODO: Force implementors to provide storage directory and grouping parameter name (group vs user)
-public abstract class AbstractFileResource
-    implements RequestHandler
+@ApplicationScoped
+public class FileController
 {
     private final Logger logger = LoggerFactory.getLogger( getClass() );
 
@@ -49,25 +46,21 @@ public abstract class AbstractFileResource
     @Inject
     protected ObjectMapper objectMapper;
 
-    private final AppConfiguration.GroupingType groupingParam;
-
-    protected AbstractFileResource( final AppConfiguration.GroupingType groupingParam )
+    protected FileController()
     {
-        this.groupingParam = groupingParam;
     }
 
-    protected AbstractFileResource( final AppConfiguration.GroupingType groupingParam, final AppConfiguration config,
+    protected FileController( final AppConfiguration config,
                                     final ObjectMapper objectMapper )
     {
-        this.groupingParam = groupingParam;
         this.config = config;
         this.objectMapper = objectMapper;
     }
     
-    @Route( binding = BindingType.raw, method = Method.GET )
-    public void list( final HttpServerRequest request )
+    //    @Route( binding = BindingType.raw, method = Method.GET )
+    public void list( final HttpServerRequest request, final GroupingType type )
     {
-        final File dir = getFile( request );
+        final File dir = getFile( request, type );
         
         if ( dir.exists() )
         {
@@ -113,19 +106,19 @@ public abstract class AbstractFileResource
         }
     }
 
-    @Route( binding = BindingType.raw, path = "/:name", method = Method.HEAD )
-    public void head( final HttpServerRequest request )
+    //    @Route( binding = BindingType.raw, path = "/:name", method = Method.HEAD )
+    public void head( final HttpServerRequest request, final GroupingType type )
     {
-        final File file = getFile( request );
+        final File file = getFile( request, type );
         logger.info( "HEAD: {}", file );
         final HttpServerResponse response = request.response();
         prepareResponseHeaders( response, file ).end();
     }
 
-    @Route( binding = BindingType.raw, path = "/:name", method = Method.GET )
-    public void get( final HttpServerRequest request )
+    //    @Route( binding = BindingType.raw, path = "/:name", method = Method.GET )
+    public void get( final HttpServerRequest request, final GroupingType type )
     {
-        final File file = getFile( request );
+        final File file = getFile( request, type );
         logger.info( "GET: {}", file );
         final HttpServerResponse response = request.response();
 
@@ -141,12 +134,12 @@ public abstract class AbstractFileResource
         }
     }
 
-    @Route( binding = BindingType.raw, path = "/:name", method = Method.PUT )
-    public void put( final HttpServerRequest request )
+    //    @Route( binding = BindingType.raw, path = "/:name", method = Method.PUT )
+    public void put( final HttpServerRequest request, final GroupingType type )
     {
         request.pause();
 
-        final File file = getFile( request );
+        final File file = getFile( request, type );
         final boolean update = file.exists();
         
         file.getParentFile()
@@ -197,10 +190,10 @@ public abstract class AbstractFileResource
         }
     }
 
-    @Route( binding = BindingType.raw, path = "/:name", method = Method.DELETE )
-    public void delete( final HttpServerRequest request )
+    //    @Route( binding = BindingType.raw, path = "/:name", method = Method.DELETE )
+    public void delete( final HttpServerRequest request, final GroupingType type )
     {
-        final File file = getFile( request );
+        final File file = getFile( request, type );
         if ( file.exists() )
         {
             if ( file.delete() )
@@ -227,9 +220,9 @@ public abstract class AbstractFileResource
         }
     }
 
-    private File getFile( final HttpServerRequest request )
+    private File getFile( final HttpServerRequest request, final GroupingType type )
     {
-        final String dir = config.getFileStorageDir( groupingParam );
+        final String dir = config.getFileStorageDir( type );
 
         if ( dir == null )
         {

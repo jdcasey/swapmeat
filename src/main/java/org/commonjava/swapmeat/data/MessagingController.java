@@ -1,4 +1,4 @@
-package org.commonjava.swapmeat.rest;
+package org.commonjava.swapmeat.data;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import org.apache.commons.io.FileUtils;
@@ -17,10 +18,6 @@ import org.commonjava.swapmeat.cdi.Providers;
 import org.commonjava.swapmeat.config.AppConfiguration;
 import org.commonjava.swapmeat.config.AppConfiguration.GroupingType;
 import org.commonjava.swapmeat.model.Notice;
-import org.commonjava.vertx.vabr.anno.Route;
-import org.commonjava.vertx.vabr.helper.RequestHandler;
-import org.commonjava.vertx.vabr.types.BindingType;
-import org.commonjava.vertx.vabr.types.Method;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.vertx.java.core.buffer.Buffer;
@@ -30,9 +27,8 @@ import org.vertx.java.core.http.HttpServerResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-// TODO: Force implementors to provide storage directory and grouping parameter name (group vs user)
-public abstract class AbstractMessagingResource
-    implements RequestHandler
+@ApplicationScoped
+public class MessagingController
 {
     private final Logger logger = LoggerFactory.getLogger( getClass() );
 
@@ -48,25 +44,20 @@ public abstract class AbstractMessagingResource
     @Inject
     protected ObjectMapper objectMapper;
 
-    private final GroupingType type;
-
-    protected AbstractMessagingResource( final GroupingType type )
+    protected MessagingController()
     {
-        this.type = type;
     }
 
-    protected AbstractMessagingResource( final GroupingType type, final AppConfiguration config,
-                                         final ObjectMapper objectMapper )
+    public MessagingController( final AppConfiguration config, final ObjectMapper objectMapper )
     {
-        this.type = type;
         this.config = config;
         this.objectMapper = objectMapper;
     }
 
-    @Route( binding = BindingType.raw, method = Method.GET )
-    public void list( final HttpServerRequest request )
+    //    @Route( binding = BindingType.raw, method = Method.GET )
+    public void list( final HttpServerRequest request, final GroupingType type )
     {
-        final File dir = getFile( request, null );
+        final File dir = getFile( request, null, type );
 
         if ( dir.exists() )
         {
@@ -144,26 +135,21 @@ public abstract class AbstractMessagingResource
         }
     }
 
-    private String format( final Date datestamp )
-    {
-        return new SimpleDateFormat( Providers.DATE_FORMAT ).format( datestamp );
-    }
-
-    @Route( binding = BindingType.raw, path = "/:id", method = Method.HEAD )
-    public void head( final HttpServerRequest request )
+    //    @Route( binding = BindingType.raw, path = "/:id", method = Method.HEAD )
+    public void head( final HttpServerRequest request, final GroupingType type )
     {
         final String id = getId( request );
-        final File file = getFile( request, id );
+        final File file = getFile( request, id, type );
         logger.info( "HEAD: {}", file );
         final HttpServerResponse response = request.response();
         prepareResponseHeaders( response, file ).end();
     }
 
-    @Route( binding = BindingType.raw, path = "/:id", method = Method.GET )
-    public void get( final HttpServerRequest request )
+    //    @Route( binding = BindingType.raw, path = "/:id", method = Method.GET )
+    public void get( final HttpServerRequest request, final GroupingType type )
     {
         final String id = getId( request );
-        final File file = getFile( request, id );
+        final File file = getFile( request, id, type );
         logger.info( "GET: {}", file );
         final HttpServerResponse response = request.response();
 
@@ -192,13 +178,13 @@ public abstract class AbstractMessagingResource
         }
     }
 
-    @Route( binding = BindingType.body_handler, method = Method.POST )
-    public void post( final HttpServerRequest request, final Buffer body )
+    //    @Route( binding = BindingType.body_handler, method = Method.POST )
+    public void post( final HttpServerRequest request, final Buffer body, final GroupingType type )
     {
         request.pause();
 
         final String id = getId( request );
-        final File file = getFile( request, id );
+        final File file = getFile( request, id, type );
 
         file.getParentFile()
             .mkdirs();
@@ -256,11 +242,11 @@ public abstract class AbstractMessagingResource
         }
     }
 
-    @Route( binding = BindingType.raw, path = "/:id", method = Method.DELETE )
-    public void delete( final HttpServerRequest request )
+    //    @Route( binding = BindingType.raw, path = "/:id", method = Method.DELETE )
+    public void delete( final HttpServerRequest request, final GroupingType type )
     {
         final String id = getId( request );
-        final File file = getFile( request, id );
+        final File file = getFile( request, id, type );
         if ( file.exists() )
         {
             if ( file.delete() )
@@ -287,6 +273,11 @@ public abstract class AbstractMessagingResource
         }
     }
 
+    private String format( final Date datestamp )
+    {
+        return new SimpleDateFormat( Providers.DATE_FORMAT ).format( datestamp );
+    }
+
     private String getId( final HttpServerRequest request )
     {
         final String id = request.params()
@@ -295,7 +286,7 @@ public abstract class AbstractMessagingResource
         return id == null ? Long.toString( System.currentTimeMillis() ) : id;
     }
 
-    private File getFile( final HttpServerRequest request, final String id )
+    private File getFile( final HttpServerRequest request, final String id, final GroupingType type )
     {
         final String dir = config.getFileStorageDir( type );
         if ( dir == null )

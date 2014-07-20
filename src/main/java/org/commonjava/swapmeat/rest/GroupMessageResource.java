@@ -13,19 +13,19 @@ import org.vertx.java.core.buffer.Buffer;
 import org.vertx.java.core.http.HttpServerRequest;
 
 @ApplicationScoped
-@Handles( value = "/api/users/:user/messages" )
-public class UserMessageResource
+@Handles( value = "/api/groups/:group/messages" )
+public class GroupMessageResource
     implements MessagingResource
 {
 
     @Inject
-    private MessagingController controller;
+    protected MessagingController controller;
 
-    protected UserMessageResource()
+    protected GroupMessageResource()
     {
     }
 
-    public UserMessageResource( final MessagingController controller )
+    public GroupMessageResource( final MessagingController controller )
     {
         this.controller = controller;
     }
@@ -34,35 +34,35 @@ public class UserMessageResource
     @Route( binding = BindingType.raw, path = "/:id", method = Method.DELETE )
     public void delete( final HttpServerRequest request )
     {
-        controller.delete( request, GroupingType.user );
+        controller.delete( request, GroupingType.group );
     }
 
     @Override
     @Route( binding = BindingType.body_handler, method = Method.POST )
     public void post( final HttpServerRequest request, final Buffer body )
     {
-        controller.post( request, body, GroupingType.user );
+        controller.post( request, body, GroupingType.group );
     }
 
     @Override
     @Route( binding = BindingType.raw, path = "/:id", method = Method.GET )
     public void get( final HttpServerRequest request )
     {
-        controller.get( request, GroupingType.user );
+        controller.get( request, GroupingType.group );
     }
 
     @Override
     @Route( binding = BindingType.raw, path = "/:id", method = Method.HEAD )
     public void head( final HttpServerRequest request )
     {
-        controller.head( request, GroupingType.user );
+        controller.head( request, GroupingType.group );
     }
 
     @Override
     @Route( binding = BindingType.raw, method = Method.GET )
     public void list( final HttpServerRequest request )
     {
-        controller.list( request, GroupingType.user );
+        controller.list( request, GroupingType.group );
     }
 
 }
