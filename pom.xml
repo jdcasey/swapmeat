@@ -45,6 +45,11 @@
         <artifactId>plexus-interpolation</artifactId>
         <version>1.19</version>
       </dependency>
+      <dependency>
+        <groupId>org.apache.shiro</groupId>
+        <artifactId>shiro-all</artifactId>
+        <version>1.2.3</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -89,6 +94,14 @@
     <dependency>
       <groupId>org.jboss.weld.se</groupId>
       <artifactId>weld-se</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.commonjava.util</groupId>
+      <artifactId>configuration-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.commonjava.util</groupId>
+      <artifactId>configuration-dotconf</artifactId>
     </dependency>
   </dependencies>
 

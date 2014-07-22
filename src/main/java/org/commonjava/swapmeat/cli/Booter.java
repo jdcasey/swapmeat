@@ -2,10 +2,12 @@ package org.commonjava.swapmeat.cli;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 
 import org.codehaus.plexus.interpolation.InterpolationException;
 import org.commonjava.swapmeat.config.AppConfiguration;
 import org.commonjava.swapmeat.rest.AppRouter;
+import org.commonjava.web.config.ConfigurationException;
 import org.jboss.weld.environment.se.Weld;
 import org.jboss.weld.environment.se.WeldContainer;
 import org.kohsuke.args4j.CmdLineException;
@@ -17,9 +19,7 @@ public class Booter
 {
     public static final String APP_HOME_PROP = "app.home";
 
-    public static final String BOOT_DEFAULTS_PROP = "app.boot.defaults";
-
-    public static final int ERR_CANT_LOAD_BOOT_DEFAULTS = 1;
+    public static final int ERR_CANT_DETECT_APP_HOME = 1;
 
     public static final int ERR_CANT_PARSE_ARGS = 2;
 
@@ -27,32 +27,26 @@ public class Booter
 
     public static final int ERR_CANT_CONFIGURE_LOGGING = 4;
 
+    public static final int ERR_CANT_LOAD_CONFIGURATION = 5;
+
     public static void main( final String[] args )
     {
-        final String bootDef = System.getProperty( BOOT_DEFAULTS_PROP );
-        File bootDefaults = null;
-        if ( bootDef != null )
-        {
-            bootDefaults = new File( bootDef );
-        }
-
         final BootOptions boot;
         try
         {
-            final String appHome = System.getProperty( APP_HOME_PROP, new File( "." ).getCanonicalPath() );
+            String appHome = System.getProperty( APP_HOME_PROP );
+            if ( appHome == null )
+            {
+                appHome = detectAppHome();
+                System.setProperty( APP_HOME_PROP, appHome );
+            }
 
-            boot = new BootOptions( bootDefaults, appHome );
+            boot = new BootOptions( appHome );
         }
         catch ( final IOException e )
         {
-            System.err.printf( "ERROR LOADING BOOT DEFAULTS: %s.\nReason: %s\n\n", bootDefaults, e.getMessage() );
-            System.exit( ERR_CANT_LOAD_BOOT_DEFAULTS );
-            return;
-        }
-        catch ( final InterpolationException e )
-        {
-            System.err.printf( "ERROR RESOLVING BOOT DEFAULTS: %s.\nReason: %s\n\n", bootDefaults, e.getMessage() );
-            System.exit( ERR_CANT_INTERP_BOOT_DEFAULTS );
+            System.err.printf( "ERROR DETECTING ${app.home}.\nReason: %s\n\n", e.getMessage() );
+            System.exit( ERR_CANT_DETECT_APP_HOME );
             return;
         }
 
@@ -77,6 +71,17 @@ public class Booter
 
         if ( canStart )
         {
+            try
+            {
+                boot.readConfig();
+            }
+            catch ( IOException | InterpolationException | ConfigurationException e )
+            {
+                System.err.printf( "ERROR LOADING CONFIGURATION: %s.\nReason: %s\n\n", boot.getConfig(), e.getMessage() );
+                System.exit( ERR_CANT_LOAD_CONFIGURATION );
+                return;
+            }
+
             final Booter booter = new Booter( boot );
             System.out.println( "Starting AProx booter: " + booter );
             final int result = booter.run();
@@ -85,6 +90,21 @@ public class Booter
                 System.exit( result );
             }
         }
+    }
+
+    private static String detectAppHome()
+        throws IOException
+    {
+        final URL url = Thread.currentThread()
+                              .getContextClassLoader()
+                              .getResource( Booter.class.getName()
+                                                        .replace( '.', '/' ) );
+        final String appHome = url.toExternalForm();
+
+        // jar containing this class is ${app.home}/lib/swapmeat.jar
+        return new File( appHome.substring( 0, appHome.indexOf( ".jar" ) ) ).getParentFile()
+                                                                            .getParentFile()
+                                                                            .getCanonicalPath();
     }
 
     public static void printUsage( final CmdLineParser parser, final CmdLineException error )

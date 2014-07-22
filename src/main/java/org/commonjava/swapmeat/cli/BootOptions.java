@@ -11,29 +11,35 @@ import org.codehaus.plexus.interpolation.InterpolationException;
 import org.codehaus.plexus.interpolation.PropertiesBasedValueSource;
 import org.codehaus.plexus.interpolation.StringSearchInterpolator;
 import org.commonjava.swapmeat.config.AppConfiguration;
+import org.commonjava.web.config.ConfigurationException;
+import org.commonjava.web.config.DefaultConfigurationListener;
+import org.commonjava.web.config.annotation.ConfigName;
+import org.commonjava.web.config.annotation.SectionName;
+import org.commonjava.web.config.dotconf.DotConfConfigurationReader;
+import org.commonjava.web.config.section.BeanSectionListener;
+import org.commonjava.web.config.section.ConfigurationSectionListener;
+import org.commonjava.web.config.section.MapSectionListener;
 import org.kohsuke.args4j.Option;
 
+@SectionName( ConfigurationSectionListener.DEFAULT_SECTION )
 public class BootOptions
 {
-    public static final String BIND_PROP = "bind";
-
-    public static final String PORT_PROP = "port";
-
-    public static final String CONFIG_PROP = "config";
-
-    public static final String WORKERS_PROP = "workers";
-
-    public static final String CONTEXT_PATH_PROP = "context-path";
-
-    public static final String GROUP_BASEDIR_PROP = "group-dir";
-
-    public static final String USER_BASEDIR_PROP = "user-dir";
-
     public static final String DEFAULT_BIND = "0.0.0.0";
+
+    public static final String DATADIR_PROP = "data-dir";
 
     public static final int DEFAULT_PORT = 8081;
 
-    public static final int DEFAULT_WORKERS_COUNT = 5;
+    public static final int DEFAULT_WORKERS = 5;
+
+    @Option( name = "-c", aliases = { "--config" }, usage = "Use an alternative configuration file (default: ${app.home}/etc/swapmeat/main.conf)" )
+    private String config;
+
+    @Option( name = "-C", aliases = { "--context-path" }, usage = "Specify a root context path for all of aprox to use" )
+    private String contextPath;
+
+    @Option( name = "-d", aliases = { "--data" }, usage = "Data base directory (default: ${app.home}/var/lib/swapmeat/data" )
+    private String dataDir;
 
     @Option( name = "-h", aliases = { "--help" }, usage = "Print this and exit" )
     private boolean help;
@@ -41,46 +47,51 @@ public class BootOptions
     @Option( name = "-i", aliases = { "--interface", "--bind", "--listen" }, usage = "Bind to a particular IP address (default: 0.0.0.0, or all available)" )
     private String bind;
 
-    @Option( name = "-p", aliases = { "--port" }, usage = "Use different port (default: 8080)" )
+    @Option( name = "-p", aliases = { "--port" }, usage = "Use different port (default: 8081)" )
     private Integer port;
-
-    @Option( name = "-c", aliases = { "--config" }, usage = "Use an alternative configuration file (default: <aprox-home>/etc/aprox/main.conf)" )
-    private String config;
 
     @Option( name = "-w", aliases = { "--workers" }, usage = "Number of worker threads to serve content (default: 5)" )
     private Integer workers;
 
-    @Option( name = "-C", aliases = { "--context-path" }, usage = "Specify a root context path for all of aprox to use" )
-    private String contextPath;
-
-    private StringSearchInterpolator interp;
-
-    private Properties bootProps;
-
     private final String appHome;
 
-    private String groupFileDir;
-
-    private final String groupMessageDir;
-
-    private String userFileDir;
-
-    private String userMessageDir;
-
-    public BootOptions( final File bootDefaults, final String aproxHome )
-        throws IOException, InterpolationException
+    public BootOptions( final String appHome )
     {
-        this.appHome = aproxHome;
-        this.bootProps = new Properties();
+        this.appHome = appHome;
+    }
 
-        if ( bootDefaults != null && bootDefaults.exists() )
+    public void readConfig()
+        throws IOException, InterpolationException, ConfigurationException
+    {
+        final Properties props = new Properties();
+        props.put( "app.home", appHome );
+        props.put( "app-home", appHome );
+
+        if ( config == null )
         {
+            config = resolve( Paths.get( appHome, "etc/swapmeat/main.conf" )
+                                   .toString(), props );
+        }
+
+        final File configFile = new File( config );
+        if ( configFile != null && configFile.exists() )
+        {
+            props.put( "app.conf", configFile.getAbsolutePath() );
+            props.put( "app-conf", configFile.getAbsolutePath() );
+
             FileInputStream stream = null;
             try
             {
-                stream = new FileInputStream( bootDefaults );
+                stream = new FileInputStream( configFile );
 
-                bootProps.load( stream );
+                final PropertiesSectionListener propListener = new PropertiesSectionListener( props );
+
+                final DefaultConfigurationListener listener =
+                    new DefaultConfigurationListener( new BeanSectionListener<BootOptions>( this ), propListener );
+
+                final DotConfConfigurationReader reader = new DotConfConfigurationReader( listener );
+
+                reader.loadConfiguration( stream, props );
             }
             finally
             {
@@ -88,62 +99,36 @@ public class BootOptions
             }
         }
 
+        if ( dataDir == null )
+        {
+            dataDir = Paths.get( appHome, "var/lib/swapmeat/data" )
+                           .toString();
+        }
+
         if ( bind == null )
         {
-            bind = resolve( bootProps.getProperty( BIND_PROP, DEFAULT_BIND ) );
+            bind = DEFAULT_BIND;
         }
 
         if ( port == null )
         {
-            port = Integer.parseInt( resolve( bootProps.getProperty( PORT_PROP, Integer.toString( DEFAULT_PORT ) ) ) );
+            port = DEFAULT_PORT;
         }
 
         if ( workers == null )
         {
-            workers =
-                Integer.parseInt( resolve( bootProps.getProperty( WORKERS_PROP,
-                                                                  Integer.toString( DEFAULT_WORKERS_COUNT ) ) ) );
+            workers = DEFAULT_WORKERS;
         }
 
-        if ( config == null )
-        {
-            final String defaultConfigPath = new File( aproxHome, "etc/aprox/main.conf" ).getPath();
-            config = resolve( bootProps.getProperty( CONFIG_PROP, defaultConfigPath ) );
-        }
+        props.put( "app.data", dataDir );
+        props.put( "app-data", dataDir );
 
-        final String groupBasedir = bootProps.getProperty( GROUP_BASEDIR_PROP );
-        final String userBasedir = bootProps.getProperty( USER_BASEDIR_PROP );
-
-        groupFileDir = resolveDataDir( groupBasedir, "files", aproxHome, "data/groups/files" );
-        groupMessageDir = resolveDataDir( groupBasedir, "notices", aproxHome, "data/groups/notices" );
-        groupFileDir = resolveDataDir( userBasedir, "files", aproxHome, "data/users/files" );
-        groupFileDir = resolveDataDir( userBasedir, "messages", aproxHome, "data/users/messages" );
-
-        contextPath = bootProps.getProperty( CONTEXT_PATH_PROP, contextPath );
+        final Properties sysprops = System.getProperties();
+        sysprops.putAll( props );
+        System.setProperties( sysprops );
     }
 
-    private String resolveDataDir( final String dataBasedir, final String dataSubdir,
-                                   final String aproxHome, final String defaultAproxHomeSubdir )
-        throws InterpolationException
-    {
-        String value = null;
-        if ( value == null && dataBasedir != null )
-        {
-            value = Paths.get( dataBasedir, dataSubdir )
-                         .toString();
-        }
-
-        if ( value == null )
-        {
-            value = Paths.get( aproxHome, defaultAproxHomeSubdir )
-                         .toString();
-
-        }
-
-        return resolve( value );
-    }
-
-    public String resolve( final String value )
+    public String resolve( final String value, final Properties props )
         throws InterpolationException
     {
         if ( value == null || value.trim()
@@ -152,25 +137,8 @@ public class BootOptions
             return null;
         }
 
-        if ( bootProps == null )
-        {
-            if ( appHome == null )
-            {
-                return value;
-            }
-            else
-            {
-                bootProps = new Properties();
-            }
-        }
-
-        bootProps.setProperty( "app.home", appHome );
-
-        if ( interp == null )
-        {
-            interp = new StringSearchInterpolator();
-            interp.addValueSource( new PropertiesBasedValueSource( bootProps ) );
-        }
+        final StringSearchInterpolator interp = new StringSearchInterpolator();
+        interp.addValueSource( new PropertiesBasedValueSource( props ) );
 
         return interp.interpolate( value );
     }
@@ -206,15 +174,23 @@ public class BootOptions
         return this;
     }
 
+    @ConfigName( "bind" )
     public BootOptions setBind( final String bind )
     {
-        this.bind = bind;
+        if ( this.bind == null )
+        {
+            this.bind = bind;
+        }
         return this;
     }
 
+    @ConfigName( "port" )
     public BootOptions setPort( final int port )
     {
-        this.port = port;
+        if ( this.port == null )
+        {
+            this.port = port;
+        }
         return this;
     }
 
@@ -224,9 +200,13 @@ public class BootOptions
         return this;
     }
 
+    @ConfigName( "workers" )
     public BootOptions setWorkers( final int workers )
     {
-        this.workers = workers;
+        if ( this.workers == null )
+        {
+            this.workers = workers;
+        }
         return this;
     }
 
@@ -245,17 +225,55 @@ public class BootOptions
         return contextPath;
     }
 
+    @ConfigName( "context-path" )
     public void setContextPath( final String contextPath )
     {
-        this.contextPath = contextPath;
+        if ( this.contextPath == null )
+        {
+            this.contextPath = contextPath;
+        }
     }
 
     public void initConfig( final AppConfiguration config )
     {
-        config.setFileStorageDir( AppConfiguration.GroupingType.group, groupFileDir );
-        config.setNoticeStorageDir( AppConfiguration.GroupingType.group, groupMessageDir );
-        config.setFileStorageDir( AppConfiguration.GroupingType.user, userFileDir );
-        config.setNoticeStorageDir( AppConfiguration.GroupingType.user, userMessageDir );
+        config.setDataDir( dataDir );
     }
 
+    @SectionName( "variables" )
+    public static final class PropertiesSectionListener
+        extends MapSectionListener
+    {
+
+        private final Properties props;
+
+        public PropertiesSectionListener( final Properties props )
+        {
+            this.props = props;
+        }
+
+        @Override
+        public void parameter( final String name, final String value )
+            throws ConfigurationException
+        {
+            if ( !props.containsKey( name ) )
+            {
+                props.setProperty( name, value );
+            }
+        }
+
+    }
+
+    public String getDataDir()
+    {
+        return dataDir;
+    }
+
+    @ConfigName( "data-dir" )
+    public void setDataDir( final String dataDir )
+    {
+        if ( this.dataDir == null )
+        {
+            this.dataDir = dataDir;
+        }
+    }
 }

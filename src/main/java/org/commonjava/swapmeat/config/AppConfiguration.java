@@ -1,7 +1,7 @@
 package org.commonjava.swapmeat.config;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.File;
+import java.nio.file.Paths;
 
 import javax.enterprise.context.ApplicationScoped;
 
@@ -9,33 +9,34 @@ import javax.enterprise.context.ApplicationScoped;
 public class AppConfiguration
 {
 
-    public enum GroupingType
+    public enum GroupingParameter
     {
         group, user;
     }
 
-    private final Map<GroupingType, String> fileStorageDirs = new HashMap<>();
+    private String dataDir;
 
-    private final Map<GroupingType, String> noticeStorageDirs = new HashMap<>();
-
-    public String getFileStorageDir( final GroupingType type )
+    public File getEntityBaseDir( final GroupingParameter type, final String named )
     {
-        return fileStorageDirs.get( type );
+        return Paths.get( dataDir, type.name(), named )
+                    .toFile();
     }
 
-    public void setFileStorageDir( final GroupingType type, final String dataDir )
+    public File getFileStorageDir( final GroupingParameter type, final String named )
     {
-        this.fileStorageDirs.put( type, dataDir );
+        return Paths.get( dataDir, type.name(), named, "files" )
+                    .toFile();
     }
 
-    public String getNoticeStorageDir( final GroupingType type )
+    public File getMessageStorageDir( final GroupingParameter type, final String named )
     {
-        return noticeStorageDirs.get( type );
+        return Paths.get( dataDir, type.name(), named, "messages" )
+                    .toFile();
     }
 
-    public void setNoticeStorageDir( final GroupingType type, final String dataDir )
+    public void setDataDir( final String dataDir )
     {
-        this.noticeStorageDirs.put( type, dataDir );
+        this.dataDir = dataDir;
     }
 
 }

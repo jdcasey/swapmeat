@@ -3,7 +3,7 @@ package org.commonjava.swapmeat.rest;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
-import org.commonjava.swapmeat.config.AppConfiguration.GroupingType;
+import org.commonjava.swapmeat.config.AppConfiguration.GroupingParameter;
 import org.commonjava.swapmeat.data.MessagingController;
 import org.commonjava.vertx.vabr.anno.Handles;
 import org.commonjava.vertx.vabr.anno.Route;
@@ -34,35 +34,35 @@ public class GroupMessageResource
     @Route( binding = BindingType.raw, path = "/:id", method = Method.DELETE )
     public void delete( final HttpServerRequest request )
     {
-        controller.delete( request, GroupingType.group );
+        controller.delete( request, GroupingParameter.group );
     }
 
     @Override
     @Route( binding = BindingType.body_handler, method = Method.POST )
     public void post( final HttpServerRequest request, final Buffer body )
     {
-        controller.post( request, body, GroupingType.group );
+        controller.post( request, body, GroupingParameter.group );
     }
 
     @Override
     @Route( binding = BindingType.raw, path = "/:id", method = Method.GET )
     public void get( final HttpServerRequest request )
     {
-        controller.get( request, GroupingType.group );
+        controller.get( request, GroupingParameter.group );
     }
 
     @Override
     @Route( binding = BindingType.raw, path = "/:id", method = Method.HEAD )
     public void head( final HttpServerRequest request )
     {
-        controller.head( request, GroupingType.group );
+        controller.head( request, GroupingParameter.group );
     }
 
     @Override
     @Route( binding = BindingType.raw, method = Method.GET )
     public void list( final HttpServerRequest request )
     {
-        controller.list( request, GroupingType.group );
+        controller.list( request, GroupingParameter.group );
     }
 
 }

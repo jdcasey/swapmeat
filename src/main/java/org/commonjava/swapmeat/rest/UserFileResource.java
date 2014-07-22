@@ -3,7 +3,7 @@ package org.commonjava.swapmeat.rest;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
-import org.commonjava.swapmeat.config.AppConfiguration.GroupingType;
+import org.commonjava.swapmeat.config.AppConfiguration.GroupingParameter;
 import org.commonjava.swapmeat.data.FileController;
 import org.commonjava.vertx.vabr.anno.Handles;
 import org.commonjava.vertx.vabr.anno.Route;
@@ -33,35 +33,35 @@ public class UserFileResource
     @Route( binding = BindingType.raw, method = Method.GET )
     public void list( final HttpServerRequest request )
     {
-        controller.list( request, GroupingType.user );
+        controller.list( request, GroupingParameter.user );
     }
 
     @Override
     @Route( binding = BindingType.raw, path = "/:name", method = Method.HEAD )
     public void head( final HttpServerRequest request )
     {
-        controller.head( request, GroupingType.user );
+        controller.head( request, GroupingParameter.user );
     }
 
     @Override
     @Route( binding = BindingType.raw, path = "/:name", method = Method.GET )
     public void get( final HttpServerRequest request )
     {
-        controller.get( request, GroupingType.user );
+        controller.get( request, GroupingParameter.user );
     }
 
     @Override
     @Route( binding = BindingType.raw, path = "/:name", method = Method.PUT )
     public void put( final HttpServerRequest request )
     {
-        controller.put( request, GroupingType.user );
+        controller.put( request, GroupingParameter.user );
     }
 
     @Override
     @Route( binding = BindingType.raw, path = "/:name", method = Method.DELETE )
     public void delete( final HttpServerRequest request )
     {
-        controller.delete( request, GroupingType.user );
+        controller.delete( request, GroupingParameter.user );
     }
 
 }

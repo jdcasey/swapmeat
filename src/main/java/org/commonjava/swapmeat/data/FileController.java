@@ -19,7 +19,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import org.commonjava.swapmeat.config.AppConfiguration;
-import org.commonjava.swapmeat.config.AppConfiguration.GroupingType;
+import org.commonjava.swapmeat.config.AppConfiguration.GroupingParameter;
 import org.commonjava.vertx.vabr.util.VertXInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,8 +33,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class FileController
 {
     private final Logger logger = LoggerFactory.getLogger( getClass() );
-
-    private static final String GROUP = "group";
 
     private static final String NAME = "name";
 
@@ -50,7 +48,7 @@ public class FileController
     {
     }
 
-    protected FileController( final AppConfiguration config,
+    public FileController( final AppConfiguration config,
                                     final ObjectMapper objectMapper )
     {
         this.config = config;
@@ -58,11 +56,11 @@ public class FileController
     }
     
     //    @Route( binding = BindingType.raw, method = Method.GET )
-    public void list( final HttpServerRequest request, final GroupingType type )
+    public void list( final HttpServerRequest request, final GroupingParameter type )
     {
         final File dir = getFile( request, type );
         
-        if ( dir.exists() )
+        if ( dir != null && dir.exists() )
         {
             final String accept = request.headers().get( "Accept" );
             if ( accept.startsWith( "application/json" ) )
@@ -107,7 +105,7 @@ public class FileController
     }
 
     //    @Route( binding = BindingType.raw, path = "/:name", method = Method.HEAD )
-    public void head( final HttpServerRequest request, final GroupingType type )
+    public void head( final HttpServerRequest request, final GroupingParameter type )
     {
         final File file = getFile( request, type );
         logger.info( "HEAD: {}", file );
@@ -116,7 +114,7 @@ public class FileController
     }
 
     //    @Route( binding = BindingType.raw, path = "/:name", method = Method.GET )
-    public void get( final HttpServerRequest request, final GroupingType type )
+    public void get( final HttpServerRequest request, final GroupingParameter type )
     {
         final File file = getFile( request, type );
         logger.info( "GET: {}", file );
@@ -135,11 +133,21 @@ public class FileController
     }
 
     //    @Route( binding = BindingType.raw, path = "/:name", method = Method.PUT )
-    public void put( final HttpServerRequest request, final GroupingType type )
+    public void put( final HttpServerRequest request, final GroupingParameter type )
     {
         request.pause();
 
         final File file = getFile( request, type );
+
+        if ( file == null )
+        {
+            request.response()
+                   .setStatusCode( 404 )
+                   .setStatusMessage( "Not Found" )
+                   .end( "No such" + type.name() );
+            return;
+        }
+
         final boolean update = file.exists();
         
         file.getParentFile()
@@ -191,10 +199,10 @@ public class FileController
     }
 
     //    @Route( binding = BindingType.raw, path = "/:name", method = Method.DELETE )
-    public void delete( final HttpServerRequest request, final GroupingType type )
+    public void delete( final HttpServerRequest request, final GroupingParameter type )
     {
         final File file = getFile( request, type );
-        if ( file.exists() )
+        if ( file != null && file.exists() )
         {
             if ( file.delete() )
             {
@@ -220,30 +228,28 @@ public class FileController
         }
     }
 
-    private File getFile( final HttpServerRequest request, final GroupingType type )
+    private File getFile( final HttpServerRequest request, final GroupingParameter type )
     {
-        final String dir = config.getFileStorageDir( type );
+        final String grouping = request.params()
+                                    .get( type.name() );
 
-        if ( dir == null )
+        final File dir = config.getFileStorageDir( type, grouping );
+
+        if ( !dir.exists() )
         {
-            logger.error( "Data directory not configured!" );
             return null;
         }
-
-        final String group = request.params()
-                                    .get( GROUP );
 
         final String name = request.params()
                                    .get( NAME );
 
         if ( name == null )
         {
-            return Paths.get( dir, group )
-                        .toFile();
+            return dir;
         }
         else
         {
-            return Paths.get( dir, group, name )
+            return Paths.get( dir.getAbsolutePath(), name )
                             .toFile();
         }
     }

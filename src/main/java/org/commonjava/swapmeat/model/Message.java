@@ -2,10 +2,12 @@ package org.commonjava.swapmeat.model;
 
 import java.util.Date;
 
-public class Notice
+public class Message
 {
 
     private String id;
+
+    private String from;
 
     private String subject;
 
@@ -56,6 +58,16 @@ public class Notice
     public boolean isValid()
     {
         return id != null && subject != null && message != null && datestamp != null;
+    }
+
+    public String getFrom()
+    {
+        return from;
+    }
+
+    public void setFrom( final String from )
+    {
+        this.from = from;
     }
 
 }

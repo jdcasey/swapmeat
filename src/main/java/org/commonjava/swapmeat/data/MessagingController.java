@@ -16,8 +16,8 @@ import javax.inject.Inject;
 import org.apache.commons.io.FileUtils;
 import org.commonjava.swapmeat.cdi.Providers;
 import org.commonjava.swapmeat.config.AppConfiguration;
-import org.commonjava.swapmeat.config.AppConfiguration.GroupingType;
-import org.commonjava.swapmeat.model.Notice;
+import org.commonjava.swapmeat.config.AppConfiguration.GroupingParameter;
+import org.commonjava.swapmeat.model.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.vertx.java.core.buffer.Buffer;
@@ -31,8 +31,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class MessagingController
 {
     private final Logger logger = LoggerFactory.getLogger( getClass() );
-
-    private static final String GROUP = "group";
 
     private static final String ID = "id";
 
@@ -55,18 +53,18 @@ public class MessagingController
     }
 
     //    @Route( binding = BindingType.raw, method = Method.GET )
-    public void list( final HttpServerRequest request, final GroupingType type )
+    public void list( final HttpServerRequest request, final GroupingParameter type )
     {
         final File dir = getFile( request, null, type );
 
-        if ( dir.exists() )
+        if ( dir != null && dir.exists() )
         {
-            final List<Notice> notices = new ArrayList<Notice>();
+            final List<Message> notices = new ArrayList<Message>();
             for ( final File file : dir.listFiles() )
             {
                 try
                 {
-                    final Notice notice = objectMapper.readValue( file, Notice.class );
+                    final Message notice = objectMapper.readValue( file, Message.class );
                     if ( notice != null )
                     {
                         notices.add( notice );
@@ -82,7 +80,7 @@ public class MessagingController
                                          .get( "Accept" );
             if ( accept.startsWith( "application/json" ) )
             {
-                final Map<String, List<Notice>> listing = Collections.singletonMap( "items", notices );
+                final Map<String, List<Message>> listing = Collections.singletonMap( "items", notices );
                 try
                 {
                     final String json = objectMapper.writeValueAsString( listing );
@@ -106,7 +104,7 @@ public class MessagingController
             else
             {
                 final StringBuilder content = new StringBuilder();
-                for ( final Notice notice : notices )
+                for ( final Message notice : notices )
                 {
                     if ( content.length() > 0 )
                     {
@@ -136,7 +134,7 @@ public class MessagingController
     }
 
     //    @Route( binding = BindingType.raw, path = "/:id", method = Method.HEAD )
-    public void head( final HttpServerRequest request, final GroupingType type )
+    public void head( final HttpServerRequest request, final GroupingParameter type )
     {
         final String id = getId( request );
         final File file = getFile( request, id, type );
@@ -146,7 +144,7 @@ public class MessagingController
     }
 
     //    @Route( binding = BindingType.raw, path = "/:id", method = Method.GET )
-    public void get( final HttpServerRequest request, final GroupingType type )
+    public void get( final HttpServerRequest request, final GroupingParameter type )
     {
         final String id = getId( request );
         final File file = getFile( request, id, type );
@@ -179,12 +177,21 @@ public class MessagingController
     }
 
     //    @Route( binding = BindingType.body_handler, method = Method.POST )
-    public void post( final HttpServerRequest request, final Buffer body, final GroupingType type )
+    public void post( final HttpServerRequest request, final Buffer body, final GroupingParameter type )
     {
         request.pause();
 
         final String id = getId( request );
         final File file = getFile( request, id, type );
+
+        if ( file == null )
+        {
+            request.response()
+                   .setStatusCode( 404 )
+                   .setStatusMessage( "Not Found" )
+                   .end( "No such" + type.name() );
+            return;
+        }
 
         file.getParentFile()
             .mkdirs();
@@ -193,10 +200,10 @@ public class MessagingController
 
         String json = body.getString( 0, body.length() );
 
-        Notice notice;
+        Message notice;
         try
         {
-            notice = objectMapper.readValue( json, Notice.class );
+            notice = objectMapper.readValue( json, Message.class );
             notice.setId( id );
 
             if ( !notice.isValid() )
@@ -243,11 +250,11 @@ public class MessagingController
     }
 
     //    @Route( binding = BindingType.raw, path = "/:id", method = Method.DELETE )
-    public void delete( final HttpServerRequest request, final GroupingType type )
+    public void delete( final HttpServerRequest request, final GroupingParameter type )
     {
         final String id = getId( request );
         final File file = getFile( request, id, type );
-        if ( file.exists() )
+        if ( file != null && file.exists() )
         {
             if ( file.delete() )
             {
@@ -286,26 +293,25 @@ public class MessagingController
         return id == null ? Long.toString( System.currentTimeMillis() ) : id;
     }
 
-    private File getFile( final HttpServerRequest request, final String id, final GroupingType type )
+    private File getFile( final HttpServerRequest request, final String id, final GroupingParameter type )
     {
-        final String dir = config.getFileStorageDir( type );
-        if ( dir == null )
+        final String grouping = request.params()
+                                       .get( type.name() );
+
+        final File dir = config.getMessageStorageDir( type, grouping );
+
+        if ( !dir.exists() )
         {
-            logger.error( "Data directory not configured!" );
             return null;
         }
 
-        final String group = request.params()
-                                    .get( GROUP );
-
         if ( id == null )
         {
-            return Paths.get( dir, group )
-                        .toFile();
+            return dir;
         }
         else
         {
-            return Paths.get( dir, group, id + ".json" )
+            return Paths.get( dir.getAbsolutePath(), id + ".json" )
                         .toFile();
         }
     }
