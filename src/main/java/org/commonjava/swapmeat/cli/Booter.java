@@ -4,6 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 
+import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.mgt.DefaultSecurityManager;
+import org.apache.shiro.mgt.SecurityManager;
+import org.apache.shiro.realm.Realm;
 import org.codehaus.plexus.interpolation.InterpolationException;
 import org.commonjava.swapmeat.config.AppConfiguration;
 import org.commonjava.swapmeat.rest.AppRouter;
@@ -175,6 +179,13 @@ public class Booter
                                                  .select( AppConfiguration.class )
                                                  .get();
         bootOptions.initConfig( config );
+
+        final Realm realm = container.instance()
+                                     .select( Realm.class )
+                                     .get();
+
+        final SecurityManager sm = new DefaultSecurityManager( realm );
+        SecurityUtils.setSecurityManager( sm );
 
         final AppRouter router = container.instance()
                                           .select( AppRouter.class )

@@ -1,4 +1,4 @@
-package org.commonjava.swapmeat.security;
+package org.commonjava.swapmeat.aaa;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.shiro.authc.SaltedAuthenticationInfo;
@@ -8,7 +8,7 @@ import org.apache.shiro.util.ByteSource;
 import org.apache.shiro.util.SimpleByteSource;
 import org.commonjava.swapmeat.model.User;
 
-public final class SWSaltedAuthenticationInfo
+public final class SwapmeatSaltedAuthenticationInfo
     implements SaltedAuthenticationInfo
 {
 
@@ -16,7 +16,7 @@ public final class SWSaltedAuthenticationInfo
 
     private final User user;
 
-    public SWSaltedAuthenticationInfo( final User user )
+    public SwapmeatSaltedAuthenticationInfo( final User user )
     {
         this.user = user;
     }

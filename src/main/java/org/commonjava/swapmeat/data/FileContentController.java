@@ -18,6 +18,9 @@ import javax.activation.MimetypesFileTypeMap;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.subject.Subject;
+import org.commonjava.swapmeat.aaa.SwapmeatRealm;
 import org.commonjava.swapmeat.config.AppConfiguration;
 import org.commonjava.swapmeat.config.AppConfiguration.GroupingParameter;
 import org.commonjava.vertx.vabr.util.VertXInputStream;
@@ -30,7 +33,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ApplicationScoped
-public class FileController
+public class FileContentController
 {
     private final Logger logger = LoggerFactory.getLogger( getClass() );
 
@@ -44,11 +47,11 @@ public class FileController
     @Inject
     protected ObjectMapper objectMapper;
 
-    protected FileController()
+    protected FileContentController()
     {
     }
 
-    public FileController( final AppConfiguration config,
+    public FileContentController( final AppConfiguration config,
                                     final ObjectMapper objectMapper )
     {
         this.config = config;
@@ -58,6 +61,10 @@ public class FileController
     //    @Route( binding = BindingType.raw, method = Method.GET )
     public void list( final HttpServerRequest request, final GroupingParameter type )
     {
+        final Subject subject = SecurityUtils.getSubject();
+        subject.checkPermission( SwapmeatRealm.readPermission( type, request.params()
+                                                                            .get( type.name() ) ) );
+
         final File dir = getFile( request, type );
         
         if ( dir != null && dir.exists() )
@@ -107,6 +114,10 @@ public class FileController
     //    @Route( binding = BindingType.raw, path = "/:name", method = Method.HEAD )
     public void head( final HttpServerRequest request, final GroupingParameter type )
     {
+        final Subject subject = SecurityUtils.getSubject();
+        subject.checkPermission( SwapmeatRealm.readPermission( type, request.params()
+                                                                            .get( type.name() ) ) );
+
         final File file = getFile( request, type );
         logger.info( "HEAD: {}", file );
         final HttpServerResponse response = request.response();
@@ -116,6 +127,10 @@ public class FileController
     //    @Route( binding = BindingType.raw, path = "/:name", method = Method.GET )
     public void get( final HttpServerRequest request, final GroupingParameter type )
     {
+        final Subject subject = SecurityUtils.getSubject();
+        subject.checkPermission( SwapmeatRealm.readPermission( type, request.params()
+                                                                            .get( type.name() ) ) );
+
         final File file = getFile( request, type );
         logger.info( "GET: {}", file );
         final HttpServerResponse response = request.response();
@@ -135,6 +150,10 @@ public class FileController
     //    @Route( binding = BindingType.raw, path = "/:name", method = Method.PUT )
     public void put( final HttpServerRequest request, final GroupingParameter type )
     {
+        final Subject subject = SecurityUtils.getSubject();
+        subject.checkPermission( SwapmeatRealm.writePermission( type, request.params()
+                                                                             .get( type.name() ) ) );
+
         request.pause();
 
         final File file = getFile( request, type );
@@ -201,6 +220,10 @@ public class FileController
     //    @Route( binding = BindingType.raw, path = "/:name", method = Method.DELETE )
     public void delete( final HttpServerRequest request, final GroupingParameter type )
     {
+        final Subject subject = SecurityUtils.getSubject();
+        subject.checkPermission( SwapmeatRealm.adminPermission( type, request.params()
+                                                                             .get( type.name() ) ) );
+
         final File file = getFile( request, type );
         if ( file != null && file.exists() )
         {

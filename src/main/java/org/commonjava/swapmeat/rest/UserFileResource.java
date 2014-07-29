@@ -4,7 +4,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import org.commonjava.swapmeat.config.AppConfiguration.GroupingParameter;
-import org.commonjava.swapmeat.data.FileController;
+import org.commonjava.swapmeat.data.FileContentController;
 import org.commonjava.vertx.vabr.anno.Handles;
 import org.commonjava.vertx.vabr.anno.Route;
 import org.commonjava.vertx.vabr.types.BindingType;
@@ -18,13 +18,13 @@ public class UserFileResource
 {
 
     @Inject
-    protected FileController controller;
+    protected FileContentController controller;
 
     protected UserFileResource()
     {
     }
 
-    public UserFileResource( final FileController controller )
+    public UserFileResource( final FileContentController controller )
     {
         this.controller = controller;
     }

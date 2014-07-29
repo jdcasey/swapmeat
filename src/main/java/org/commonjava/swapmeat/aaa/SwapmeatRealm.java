@@ -1,11 +1,11 @@
-package org.commonjava.swapmeat.security;
+package org.commonjava.swapmeat.aaa;
 
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.AuthenticationInfo;
@@ -32,7 +32,7 @@ import org.commonjava.swapmeat.model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@ApplicationScoped
+@Singleton
 public class SwapmeatRealm
     extends AuthorizingRealm
     implements RolePermissionResolver
@@ -45,6 +45,10 @@ public class SwapmeatRealm
 
     public static final String ROLE_MEMBER = "member";
 
+    public static final String ROLE_COLLEAGUE = "colleague";
+
+    public static final String ROLE_OWNER = "owner";
+
     public static final String PRIV_READ = "read";
 
     public static final String PRIV_WRITE = "write";
@@ -56,6 +60,8 @@ public class SwapmeatRealm
     public static final String PRIV_GLOBAL_ADMIN = "_global:" + PRIV_ADMIN;
 
     public static final String WRA = PRIV_READ + "," + PRIV_WRITE + "," + PRIV_ADMIN;
+
+    private static final String WR = PRIV_READ + "," + PRIV_WRITE;
 
     @Inject
     protected EntityController entityController;
@@ -104,11 +110,21 @@ public class SwapmeatRealm
             {
                 if ( ROLE_ADMIN.equals( parts[1] ) )
                 {
-                    permissions.add( new WildcardPermission( parts[0] + ":read,write,admin" ) );
+                    permissions.add( new WildcardPermission( GroupingParameter.group.name() + ":" + parts[0] + ":"
+                        + WRA ) );
                 }
                 else if ( ROLE_MEMBER.equals( parts[1] ) )
                 {
-                    permissions.add( new WildcardPermission( parts[0] + ":read,write" ) );
+                    permissions.add( new WildcardPermission( GroupingParameter.group.name() + ":" + parts[0] + ":" + WR ) );
+                }
+                else if ( ROLE_COLLEAGUE.equals( parts[1] ) )
+                {
+                    permissions.add( new WildcardPermission( GroupingParameter.user.name() + ":" + parts[0] + ":"
+                        + PRIV_WRITE ) );
+                }
+                else if ( ROLE_OWNER.equals( parts[1] ) )
+                {
+                    permissions.add( new WildcardPermission( GroupingParameter.user.name() + ":" + parts[0] + ":" + WRA ) );
                 }
             }
         }
@@ -129,6 +145,8 @@ public class SwapmeatRealm
         {
             final User user = entityController.read( userId, GroupingParameter.user, User.class );
             final SimpleAuthorizationInfo info = new SimpleAuthorizationInfo();
+
+            info.addRole( userId + ":" + ROLE_OWNER );
             for ( final String groupName : user.getGroups() )
             {
                 if ( Group.ADMIN_GROUP.equals( groupName ) )
@@ -145,6 +163,11 @@ public class SwapmeatRealm
                     else
                     {
                         info.addRole( groupName + ":" + ROLE_MEMBER );
+                    }
+
+                    for ( final String member : group.getMembers() )
+                    {
+                        info.addRole( member + ":" + ROLE_COLLEAGUE );
                     }
                 }
             }
@@ -170,12 +193,27 @@ public class SwapmeatRealm
         {
             final User user = entityController.read( username, GroupingParameter.user, User.class );
 
-            return new SWSaltedAuthenticationInfo( user );
+            return new SwapmeatSaltedAuthenticationInfo( user );
         }
         catch ( final SwapmeatException e )
         {
             throw new AuthenticationException( "Failed to load user: " + username, e );
         }
+    }
+
+    public static String readPermission( final GroupingParameter param, final String name )
+    {
+        return name + ":" + PRIV_READ;
+    }
+
+    public static String writePermission( final GroupingParameter param, final String name )
+    {
+        return name + ":" + PRIV_WRITE;
+    }
+
+    public static String adminPermission( final GroupingParameter param, final String name )
+    {
+        return name + ":" + PRIV_ADMIN;
     }
 
 }

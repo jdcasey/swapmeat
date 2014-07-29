@@ -8,7 +8,10 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.subject.Subject;
 import org.commonjava.swapmeat.SwapmeatException;
+import org.commonjava.swapmeat.aaa.SwapmeatRealm;
 import org.commonjava.swapmeat.config.AppConfiguration;
 import org.commonjava.swapmeat.config.AppConfiguration.GroupingParameter;
 
@@ -38,6 +41,9 @@ public class EntityController
     public <T> T read( final String name, final GroupingParameter grouping, final Class<T> entityType )
         throws SwapmeatException
     {
+        final Subject subject = SecurityUtils.getSubject();
+        subject.checkPermission( SwapmeatRealm.readPermission( grouping, name ) );
+
         final File entity = Paths.get( config.getEntityBaseDir( grouping, name )
                                              .getAbsolutePath(), ENTITY_FILE )
                                  .toFile();
@@ -60,6 +66,9 @@ public class EntityController
     public <T> void write( final String name, final T instance, final GroupingParameter grouping )
         throws SwapmeatException
     {
+        final Subject subject = SecurityUtils.getSubject();
+        subject.checkPermission( SwapmeatRealm.adminPermission( grouping, name ) );
+
         final File entity = Paths.get( config.getEntityBaseDir( grouping, name )
                                              .getAbsolutePath(), ENTITY_FILE )
                                  .toFile();
@@ -83,6 +92,9 @@ public class EntityController
     public void delete( final String name, final GroupingParameter grouping )
         throws SwapmeatException
     {
+        final Subject subject = SecurityUtils.getSubject();
+        subject.checkPermission( SwapmeatRealm.adminPermission( grouping, name ) );
+
         final File entity = Paths.get( config.getEntityBaseDir( grouping, name )
                                              .getAbsolutePath(), ENTITY_FILE )
                                  .toFile();

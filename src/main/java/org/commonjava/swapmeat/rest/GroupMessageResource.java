@@ -4,7 +4,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import org.commonjava.swapmeat.config.AppConfiguration.GroupingParameter;
-import org.commonjava.swapmeat.data.MessagingController;
+import org.commonjava.swapmeat.data.MessagingContentController;
 import org.commonjava.vertx.vabr.anno.Handles;
 import org.commonjava.vertx.vabr.anno.Route;
 import org.commonjava.vertx.vabr.types.BindingType;
@@ -19,13 +19,13 @@ public class GroupMessageResource
 {
 
     @Inject
-    protected MessagingController controller;
+    protected MessagingContentController controller;
 
     protected GroupMessageResource()
     {
     }
 
-    public GroupMessageResource( final MessagingController controller )
+    public GroupMessageResource( final MessagingContentController controller )
     {
         this.controller = controller;
     }

@@ -14,6 +14,9 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.subject.Subject;
+import org.commonjava.swapmeat.aaa.SwapmeatRealm;
 import org.commonjava.swapmeat.cdi.Providers;
 import org.commonjava.swapmeat.config.AppConfiguration;
 import org.commonjava.swapmeat.config.AppConfiguration.GroupingParameter;
@@ -28,7 +31,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ApplicationScoped
-public class MessagingController
+public class MessagingContentController
 {
     private final Logger logger = LoggerFactory.getLogger( getClass() );
 
@@ -42,11 +45,11 @@ public class MessagingController
     @Inject
     protected ObjectMapper objectMapper;
 
-    protected MessagingController()
+    protected MessagingContentController()
     {
     }
 
-    public MessagingController( final AppConfiguration config, final ObjectMapper objectMapper )
+    public MessagingContentController( final AppConfiguration config, final ObjectMapper objectMapper )
     {
         this.config = config;
         this.objectMapper = objectMapper;
@@ -55,6 +58,10 @@ public class MessagingController
     //    @Route( binding = BindingType.raw, method = Method.GET )
     public void list( final HttpServerRequest request, final GroupingParameter type )
     {
+        final Subject subject = SecurityUtils.getSubject();
+        subject.checkPermission( SwapmeatRealm.readPermission( type, request.params()
+                                                                            .get( type.name() ) ) );
+
         final File dir = getFile( request, null, type );
 
         if ( dir != null && dir.exists() )
@@ -136,6 +143,10 @@ public class MessagingController
     //    @Route( binding = BindingType.raw, path = "/:id", method = Method.HEAD )
     public void head( final HttpServerRequest request, final GroupingParameter type )
     {
+        final Subject subject = SecurityUtils.getSubject();
+        subject.checkPermission( SwapmeatRealm.readPermission( type, request.params()
+                                                                            .get( type.name() ) ) );
+
         final String id = getId( request );
         final File file = getFile( request, id, type );
         logger.info( "HEAD: {}", file );
@@ -146,6 +157,10 @@ public class MessagingController
     //    @Route( binding = BindingType.raw, path = "/:id", method = Method.GET )
     public void get( final HttpServerRequest request, final GroupingParameter type )
     {
+        final Subject subject = SecurityUtils.getSubject();
+        subject.checkPermission( SwapmeatRealm.readPermission( type, request.params()
+                                                                            .get( type.name() ) ) );
+
         final String id = getId( request );
         final File file = getFile( request, id, type );
         logger.info( "GET: {}", file );
@@ -179,6 +194,10 @@ public class MessagingController
     //    @Route( binding = BindingType.body_handler, method = Method.POST )
     public void post( final HttpServerRequest request, final Buffer body, final GroupingParameter type )
     {
+        final Subject subject = SecurityUtils.getSubject();
+        subject.checkPermission( SwapmeatRealm.writePermission( type, request.params()
+                                                                             .get( type.name() ) ) );
+
         request.pause();
 
         final String id = getId( request );
@@ -252,6 +271,10 @@ public class MessagingController
     //    @Route( binding = BindingType.raw, path = "/:id", method = Method.DELETE )
     public void delete( final HttpServerRequest request, final GroupingParameter type )
     {
+        final Subject subject = SecurityUtils.getSubject();
+        subject.checkPermission( SwapmeatRealm.adminPermission( type, request.params()
+                                                                             .get( type.name() ) ) );
+
         final String id = getId( request );
         final File file = getFile( request, id, type );
         if ( file != null && file.exists() )
